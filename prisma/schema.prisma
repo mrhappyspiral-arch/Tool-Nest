@@ -6,7 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // ローカル開発では sqlite でも良いが、Vercel 本番で永続化するために PostgreSQL を前提とする
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
