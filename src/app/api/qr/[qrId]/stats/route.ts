@@ -99,10 +99,12 @@ export async function GET(
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    const publicUrl = getPublicUrl(qrCode.id, request);
+
     return NextResponse.json({
       name: qrCode.name || '無題のQR',
       targetUrl: qrCode.targetUrl,
-      publicUrl: getPublicUrl(qrCode.id),
+      publicUrl,
       createdAt: new Date(qrCode.createdAt).toISOString(),
       today,
       last7days,

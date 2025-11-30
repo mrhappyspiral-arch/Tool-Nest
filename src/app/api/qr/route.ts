@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { 
+import {
   generateManageToken,
   generateQrId,
-  getPublicUrl, 
-  getManageUrl, 
-  isValidUrl 
+  getPublicUrl,
+  getManageUrl,
+  isValidUrl,
 } from '@/lib/qr-utils';
 
 // Node.js ランタイム（ファイルベースDB使用のため）
@@ -49,12 +49,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // レスポンス
+    // レスポンス（現在アクセスしているオリジンをベースURLとして使用）
+    const publicUrl = getPublicUrl(qrCode.id, request);
+    const manageUrl = getManageUrl(qrCode.id, manageToken, request);
+
     return NextResponse.json({
       qrId: qrCode.id,
       displayName: qrCode.name || '無題のQR',
-      publicUrl: getPublicUrl(qrCode.id),
-      manageUrl: getManageUrl(qrCode.id, manageToken),
+      publicUrl,
+      manageUrl,
     });
   } catch (error) {
     console.error('QR creation error:', error);
