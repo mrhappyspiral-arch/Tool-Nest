@@ -6,9 +6,11 @@ generator client {
 }
 
 datasource db {
-  // ローカル開発では sqlite でも良いが、Vercel 本番で永続化するために PostgreSQL を前提とする
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Vercel Postgres (Neon) 用の環境変数を使用
+  url       = env("POSTGRES_PRISMA_URL")
+  // 環境変数が足りない場合があるため、directUrlは一旦無効化します
+  // directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 // QRコードテーブル
@@ -39,5 +41,3 @@ model QrScanLog {
 
   @@map("qr_scan_logs")
 }
-
-
