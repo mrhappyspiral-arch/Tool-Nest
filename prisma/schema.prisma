@@ -1,0 +1,42 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// QRコードテーブル
+model QrCode {
+  id          String   @id @default(uuid())
+  name        String?  // ユーザーが付けた名前（任意）
+  targetUrl   String   // 遷移先URL
+  manageToken String   @unique // 管理URL用のランダムトークン
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // スキャンログとのリレーション
+  scanLogs QrScanLog[]
+
+  @@map("qr_codes")
+}
+
+// スキャンログテーブル
+model QrScanLog {
+  id        String   @id @default(uuid())
+  qrId      String   // 紐づくQRのid
+  scannedAt DateTime @default(now())
+  userAgent String?  // UA（簡易的）
+  ipHash    String?  // 匿名化したIP（任意）
+
+  // QRコードとのリレーション
+  qrCode QrCode @relation(fields: [qrId], references: [id], onDelete: Cascade)
+
+  @@map("qr_scan_logs")
+}
+
+
