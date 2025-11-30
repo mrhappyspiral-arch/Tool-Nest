@@ -85,7 +85,8 @@ export async function GET(
     }
 
     logs.forEach((log) => {
-      const dateStr = log.scannedAt.toISOString().split('T')[0];
+      const scannedDate = new Date(log.scannedAt);
+      const dateStr = scannedDate.toISOString().split('T')[0];
       if (dailyMap[dateStr] !== undefined) {
         dailyMap[dateStr]++;
       }
@@ -99,7 +100,7 @@ export async function GET(
       name: qrCode.name || '無題のQR',
       targetUrl: qrCode.targetUrl,
       publicUrl: getPublicUrl(qrCode.id),
-      createdAt: qrCode.createdAt.toISOString(),
+      createdAt: new Date(qrCode.createdAt).toISOString(),
       today,
       last7days,
       total,
