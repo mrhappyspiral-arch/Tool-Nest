@@ -59,7 +59,7 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       targetUrl: updated.targetUrl,
-      updatedAt: updated.updatedAt.toISOString(),
+      updatedAt: new Date(updated.updatedAt).toISOString(),
     });
   } catch (error) {
     console.error('Update error:', error);
