@@ -14,12 +14,16 @@ import type { ExifData, GPS, RiskAnalysis, RiskLevel } from '@/types';
 export async function parseExif(file: File): Promise<ExifData> {
   try {
     // exifrで全てのEXIFデータを取得
-    const data = await exifr.parse(file, {
-      gps: true,
-      exif: true,
-      ifd0: true,
-      ifd1: true,
-    });
+    // 型定義が厳しくオプション指定で型エラーになるため、実際の挙動に合わせて any キャストで回避
+    const data = await exifr.parse(
+      file,
+      {
+        gps: true,
+        exif: true,
+        ifd0: true,
+        ifd1: true,
+      } as any
+    );
 
     if (!data) {
       return { raw: {} };
