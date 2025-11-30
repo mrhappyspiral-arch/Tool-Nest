@@ -222,17 +222,9 @@ export function formatExifForDisplay(exifData: ExifData): Array<{
   }
 
   if (exifData.dateTime) {
-    const dateTimeStr = exifData.dateTime instanceof Date
-      ? exifData.dateTime.toLocaleString('ja-JP', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      : String(exifData.dateTime);
-    
+    // ExifData.dateTime は文字列として扱う（parseExif でローカライズ済み）
+    const dateTimeStr = String(exifData.dateTime);
+
     items.push({
       key: '撮影日時',
       value: dateTimeStr,
