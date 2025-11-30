@@ -9,13 +9,14 @@ interface SafetyMapProps {
   gps: GPS;
 }
 
-/**
- * SafetyMap（簡易版）
- * 
- * Leaflet / react-leaflet に依存せず、GPS座標とリスク情報だけを表示するコンポーネント。
- * これにより、外部地図ライブラリが無くても SafePic 全体が動作します。
- */
 export function SafetyMap({ gps }: SafetyMapProps) {
+  const { latitude, longitude } = gps;
+  const zoom = 15;
+  const delta = 0.01;
+
+  // OpenStreetMap のシンプルな埋め込み地図
+  const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - delta}%2C${latitude - delta}%2C${longitude + delta}%2C${latitude + delta}&layer=mapnik&marker=${latitude}%2C${longitude}`;
+
   return (
     <Card className="overflow-hidden">
       <div className="bg-destructive/10 p-4 border-b border-destructive/20">
@@ -49,11 +50,24 @@ export function SafetyMap({ gps }: SafetyMapProps) {
 
         <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
           <p className="font-mono text-sm">
-            緯度: <span className="font-semibold">{gps.latitude.toFixed(6)}</span>
+            緯度: <span className="font-semibold">{latitude.toFixed(6)}</span>
           </p>
           <p className="font-mono text-sm mt-1">
-            経度: <span className="font-semibold">{gps.longitude.toFixed(6)}</span>
+            経度: <span className="font-semibold">{longitude.toFixed(6)}</span>
           </p>
+        </div>
+
+        {/* 簡易地図表示（OpenStreetMap埋め込み） */}
+        <div className="rounded-lg border border-slate-200 overflow-hidden">
+          <div className="aspect-[4/3] w-full">
+            <iframe
+              title="撮影位置の地図"
+              src={mapSrc}
+              className="w-full h-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
         </div>
 
         <Alert variant="destructive" className="mt-2">

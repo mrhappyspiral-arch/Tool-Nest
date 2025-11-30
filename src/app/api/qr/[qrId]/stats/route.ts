@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getPublicUrl } from '@/lib/qr-utils';
 
+// Node.js ランタイム（ファイルベースDB使用のため）
+export const runtime = 'nodejs';
+
 /**
  * 統計取得API
  * GET /api/qr/{qrId}/stats?token={manageToken}

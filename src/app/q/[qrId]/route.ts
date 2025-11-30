@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { hashIp } from '@/lib/qr-utils';
 
+// Node.js ランタイム（ファイルベースDB使用のため）
+export const runtime = 'nodejs';
+
 /**
  * リダイレクト＆トラッキング
  * GET /q/{qrId}

@@ -8,6 +8,9 @@ import {
   isValidUrl 
 } from '@/lib/qr-utils';
 
+// Node.js ランタイム（ファイルベースDB使用のため）
+export const runtime = 'nodejs';
+
 /**
  * QRコード作成API
  * POST /api/qr

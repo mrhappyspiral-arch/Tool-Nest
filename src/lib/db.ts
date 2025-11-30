@@ -2,7 +2,12 @@ import fs from 'fs';
 import path from 'path';
 
 // データファイルのパス
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Vercel などのサーバーレス環境ではプロジェクトディレクトリは読み取り専用のため、
+// 一時ディレクトリ（/tmp）配下を使用する。
+const DATA_DIR =
+  process.env.VERCEL === '1'
+    ? path.join('/tmp', 'tool-nest-data')
+    : path.join(process.cwd(), 'data');
 const QR_CODES_FILE = path.join(DATA_DIR, 'qr-codes.json');
 const SCAN_LOGS_FILE = path.join(DATA_DIR, 'scan-logs.json');
 
