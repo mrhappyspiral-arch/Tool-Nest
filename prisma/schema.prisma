@@ -36,6 +36,19 @@ model QrScanLog {
   userAgent String?  // UA（簡易的）
   ipHash    String?  // 匿名化したIP（任意）
 
+  // 追加の分析用情報
+  deviceType String? // 端末種別（desktop / mobile / tablet など）
+  os         String? // OS名（iOS / Android / Windows など）
+  browser    String? // ブラウザ名（Chrome / Safari など）
+
+  // 大まかな地域情報（Vercel が付与するヘッダーから取得）
+  country String? // 国コード（JP など）
+  region  String? // 地域（都道府県など）
+  city    String? // 都市名
+
+  // アクセス時の時間帯（0-23時）
+  hour Int?
+
   // QRコードとのリレーション
   qrCode QrCode @relation(fields: [qrId], references: [id], onDelete: Cascade)
 

@@ -9,12 +9,12 @@ interface StatsChartProps {
 export function StatsChart({ daily }: StatsChartProps) {
   const maxCount = Math.max(...daily.map(d => d.count), 1);
 
-  // 最新7日間を表示
-  const recentDaily = daily.slice(-7);
+  // API から渡された期間全体を表示（特定月を選択した場合にも対応）
+  const recentDaily = daily;
 
   return (
     <div className="bg-white rounded-xl p-4 border border-slate-200">
-      <h3 className="text-sm font-semibold text-slate-700 mb-4">日別スキャン数（過去7日間）</h3>
+      <h3 className="text-sm font-semibold text-slate-700 mb-4">日別スキャン数</h3>
       <div className="flex items-end justify-between gap-2 h-32">
         {recentDaily.map((item, index) => {
           const height = (item.count / maxCount) * 100;

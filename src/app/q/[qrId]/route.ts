@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { hashIp } from '@/lib/qr-utils';
+import { getRequestLocation, hashIp, parseUserAgent } from '@/lib/qr-utils';
 
 // Node.js ランタイム（ファイルベースDB使用のため）
 export const runtime = 'nodejs';
@@ -34,16 +34,31 @@ export async function GET(
     }
 
     // スキャンログを記録
-    const userAgent = request.headers.get('user-agent') || undefined;
+    const scannedAt = new Date();
+
+    const userAgentHeader = request.headers.get('user-agent');
+    const userAgent = userAgentHeader || undefined;
+
     const forwardedFor = request.headers.get('x-forwarded-for');
     const ip = forwardedFor?.split(',')[0]?.trim() || 'unknown';
     const ipHash = hashIp(ip);
 
+    const { deviceType, os, browser } = parseUserAgent(userAgentHeader);
+    const { country, region, city } = getRequestLocation(request);
+
     await prisma.qrScanLog.create({
       data: {
         qrId: qrCode.id,
+        scannedAt,
         userAgent,
         ipHash,
+        deviceType,
+        os,
+        browser,
+        country,
+        region,
+        city,
+        hour: scannedAt.getHours(),
       },
     });
 

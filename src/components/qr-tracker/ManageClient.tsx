@@ -30,6 +30,12 @@ export default function ManageClient({ qrId }: ManageClientProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  });
 
   const fetchStats = async () => {
     if (!token) {
@@ -40,7 +46,20 @@ export default function ManageClient({ qrId }: ManageClientProps) {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/qr/${qrId}/stats?token=${encodeURIComponent(token)}`);
+      const url = new URL(
+        `/api/qr/${qrId}/stats`,
+        window.location.origin
+      );
+      url.searchParams.set('token', token);
+
+      // 年月をクエリに付与（特定月の日別集計）
+      if (selectedMonth) {
+        const [year, month] = selectedMonth.split('-');
+        url.searchParams.set('year', year);
+        url.searchParams.set('month', month);
+      }
+
+      const response = await fetch(url.toString());
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -65,7 +84,7 @@ export default function ManageClient({ qrId }: ManageClientProps) {
   useEffect(() => {
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrId, token]);
+  }, [qrId, token, selectedMonth]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -102,6 +121,81 @@ export default function ManageClient({ qrId }: ManageClientProps) {
   const handleUrlUpdate = (newUrl: string) => {
     if (stats) {
       setStats({ ...stats, targetUrl: newUrl });
+    }
+  };
+
+  const handleMonthChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedMonth(event.target.value);
+  };
+
+  const downloadCsv = async (mode: 'month' | 'all') => {
+    if (!token) return;
+
+    try {
+      const url = new URL(
+        `/api/qr/${qrId}/stats/csv`,
+        window.location.origin
+      );
+      url.searchParams.set('token', token);
+      url.searchParams.set('mode', mode);
+
+      if (mode === 'month' && selectedMonth) {
+        const [year, month] = selectedMonth.split('-');
+        url.searchParams.set('year', year);
+        url.searchParams.set('month', month);
+      }
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        console.error('CSV download failed');
+        return;
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      const suffix =
+        mode === 'all'
+          ? 'all'
+          : selectedMonth.replace('-', '');
+      link.download = `qr-${qrId}-stats-${suffix}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('CSV download error:', err);
+    }
+  };
+
+  const downloadRawLogs = async () => {
+    if (!token) return;
+
+    try {
+      const url = new URL(
+        `/api/qr/${qrId}/logs/csv`,
+        window.location.origin
+      );
+      url.searchParams.set('token', token);
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        console.error('Raw logs CSV download failed');
+        return;
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `qr-${qrId}-logs.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Raw logs CSV download error:', err);
     }
   };
 
@@ -262,9 +356,64 @@ export default function ManageClient({ qrId }: ManageClientProps) {
           </div>
         </div>
 
-        {/* グラフとURL更新 */}
+        {/* グラフとURL更新・CSVダウンロード */}
         <div className="grid md:grid-cols-2 gap-6">
-          <StatsChart daily={stats.daily} />
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl p-4 border border-slate-200">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                集計対象月の選択
+              </h3>
+              <div className="flex items-center gap-3">
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                  className="border border-slate-300 rounded-md px-2 py-1 text-sm"
+                />
+                <span className="text-xs text-slate-500">
+                  選択した月の日別スキャン数とCSVを取得します
+                </span>
+              </div>
+            </div>
+
+            <StatsChart daily={stats.daily} />
+
+            <div className="bg-white rounded-xl p-4 border border-slate-200 space-y-3">
+              <h3 className="text-sm font-semibold text-slate-700">
+                CSV ダウンロード
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadCsv('month')}
+                  className="flex items-center gap-1"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>日別CSV（この月）</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadCsv('all')}
+                  className="flex items-center gap-1"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>日別CSV（全期間）</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadRawLogs}
+                  className="flex items-center gap-1"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>生ログCSV（1行1アクセス）</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <UrlUpdateForm
             qrId={qrId}
             token={token || ''}

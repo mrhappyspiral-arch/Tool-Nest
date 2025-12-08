@@ -18,6 +18,10 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
 
+    // オプション: 特定の年月で日別集計を行う
+    const yearParam = searchParams.get('year');
+    const monthParam = searchParams.get('month'); // 1-12 を想定
+
     // tokenが必要
     if (!token) {
       return NextResponse.json(
@@ -39,7 +43,7 @@ export async function GET(
       );
     }
 
-    // 日付計算
+    // 日付計算（デフォルトは今日基準の7日/14日集計）
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sevenDaysAgo = new Date(todayStart);
@@ -66,38 +70,93 @@ export async function GET(
       },
     });
 
-    // 日別スキャン数（過去14日）
-    const fourteenDaysAgo = new Date(todayStart);
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    let daily: { date: string; count: number }[] = [];
 
-    const logs = await prisma.qrScanLog.findMany({
-      where: {
-        qrId,
-        scannedAt: { gte: fourteenDaysAgo },
-      },
-      select: { scannedAt: true },
-    });
+    if (yearParam && monthParam) {
+      // 特定の年月で日別集計
+      const year = Number(yearParam);
+      const monthIndex = Number(monthParam) - 1; // 0-11
 
-    // 日別に集計
-    const dailyMap: Record<string, number> = {};
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(todayStart);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      dailyMap[dateStr] = 0;
-    }
-
-    logs.forEach((log) => {
-      const scannedDate = new Date(log.scannedAt);
-      const dateStr = scannedDate.toISOString().split('T')[0];
-      if (dailyMap[dateStr] !== undefined) {
-        dailyMap[dateStr]++;
+      if (
+        Number.isNaN(year) ||
+        Number.isNaN(monthIndex) ||
+        monthIndex < 0 ||
+        monthIndex > 11
+      ) {
+        return NextResponse.json(
+          { error: 'Invalid year or month' },
+          { status: 400 }
+        );
       }
-    });
 
-    const daily = Object.entries(dailyMap)
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+      const monthStart = new Date(year, monthIndex, 1);
+      const nextMonthStart = new Date(year, monthIndex + 1, 1);
+
+      const monthLogs = await prisma.qrScanLog.findMany({
+        where: {
+          qrId,
+          scannedAt: {
+            gte: monthStart,
+            lt: nextMonthStart,
+          },
+        },
+        select: { scannedAt: true },
+      });
+
+      // 対象月の日数を算出
+      const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+      const dailyMap: Record<string, number> = {};
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, monthIndex, day);
+        const dateStr = date.toISOString().split('T')[0];
+        dailyMap[dateStr] = 0;
+      }
+
+      monthLogs.forEach((log) => {
+        const scannedDate = new Date(log.scannedAt);
+        const dateStr = scannedDate.toISOString().split('T')[0];
+        if (dailyMap[dateStr] !== undefined) {
+          dailyMap[dateStr]++;
+        }
+      });
+
+      daily = Object.entries(dailyMap)
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    } else {
+      // デフォルト: 過去14日分を日別集計
+      const fourteenDaysAgo = new Date(todayStart);
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+      const logs = await prisma.qrScanLog.findMany({
+        where: {
+          qrId,
+          scannedAt: { gte: fourteenDaysAgo },
+        },
+        select: { scannedAt: true },
+      });
+
+      const dailyMap: Record<string, number> = {};
+      for (let i = 0; i < 14; i++) {
+        const date = new Date(todayStart);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        dailyMap[dateStr] = 0;
+      }
+
+      logs.forEach((log) => {
+        const scannedDate = new Date(log.scannedAt);
+        const dateStr = scannedDate.toISOString().split('T')[0];
+        if (dailyMap[dateStr] !== undefined) {
+          dailyMap[dateStr]++;
+        }
+      });
+
+      daily = Object.entries(dailyMap)
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
 
     const publicUrl = getPublicUrl(qrCode.id, request);
 
