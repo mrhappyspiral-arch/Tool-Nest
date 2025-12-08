@@ -44,7 +44,10 @@ export async function GET(
     const ipHash = hashIp(ip);
 
     const { deviceType, os, browser } = parseUserAgent(userAgentHeader);
-    const { country, region, city } = getRequestLocation(request);
+    const { country, region, city } = await getRequestLocation(request, ip);
+
+    // hour は日本時間（JST, UTC+9）の時を保存
+    const jstHour = (scannedAt.getUTCHours() + 9) % 24;
 
     await prisma.qrScanLog.create({
       data: {
@@ -58,7 +61,7 @@ export async function GET(
         country,
         region,
         city,
-        hour: scannedAt.getHours(),
+        hour: jstHour,
       },
     });
 

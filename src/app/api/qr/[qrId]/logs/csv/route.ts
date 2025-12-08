@@ -65,6 +65,27 @@ export async function GET(
       return str;
     };
 
+    const toJstStringAndHour = (date: Date): { datetime: string; hour: number } => {
+      const d = new Date(date);
+      // UTC から 9時間加算して JST に変換
+      const jstMs = d.getTime() + 9 * 60 * 60 * 1000;
+      const jst = new Date(jstMs);
+
+      const pad = (n: number) => String(n).padStart(2, '0');
+
+      const year = jst.getUTCFullYear();
+      const month = pad(jst.getUTCMonth() + 1);
+      const day = pad(jst.getUTCDate());
+      const hour = jst.getUTCHours();
+      const minute = pad(jst.getUTCMinutes());
+      const second = pad(jst.getUTCSeconds());
+
+      return {
+        datetime: `${year}-${month}-${day} ${pad(hour)}:${minute}:${second}`,
+        hour,
+      };
+    };
+
     const header = [
       'scannedAt',
       'deviceType',
@@ -78,15 +99,17 @@ export async function GET(
     ].join(',');
 
     const lines = logs.map((log) => {
+      const { datetime, hour } = toJstStringAndHour(log.scannedAt);
+
       const row = [
-        new Date(log.scannedAt).toISOString(),
+        datetime, // 日本時間（JST）での日時
         log.deviceType ?? '',
         log.os ?? '',
         log.browser ?? '',
         log.country ?? '',
         log.region ?? '',
         log.city ?? '',
-        log.hour ?? '',
+        hour, // 日本時間での時（0-23）
         log.userAgent ?? '',
       ].map(escape);
 

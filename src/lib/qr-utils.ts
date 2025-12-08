@@ -62,16 +62,73 @@ export function parseUserAgent(ua?: string | null): {
 }
 
 /**
- * Vercel が付与するヘッダーから大まかな地域情報を取得
+ * 大まかな地域情報を取得
+ *
+ * - まず Vercel が付与するヘッダーから取得
+ * - region / city が取れない場合は、IPベースの簡易GeoIP APIで補完
  */
-export function getRequestLocation(request: NextRequest): {
+export async function getRequestLocation(
+  request: NextRequest,
+  ip: string
+): Promise<{
   country?: string;
   region?: string;
   city?: string;
-} {
-  const country = request.headers.get('x-vercel-ip-country') || undefined;
-  const region = request.headers.get('x-vercel-ip-country-region') || undefined;
-  const city = request.headers.get('x-vercel-ip-city') || undefined;
+}> {
+  let country =
+    request.headers.get('x-vercel-ip-country') || undefined;
+
+  // リージョンはヘッダー名の違いに備えて複数パターンを確認
+  let region =
+    request.headers.get('x-vercel-ip-country-region') ||
+    request.headers.get('x-vercel-ip-region') ||
+    undefined;
+
+  let city =
+    request.headers.get('x-vercel-ip-city') || undefined;
+
+  // すでにすべて取得できていれば API 呼び出しは不要
+  const needsLookup = !region || !city;
+
+  if (
+    needsLookup &&
+    ip &&
+    ip !== 'unknown' &&
+    !ip.startsWith('127.') &&
+    ip !== '::1'
+  ) {
+    try {
+      // 外部の簡易GeoIPサービスで地域情報を補完（大体の地域）
+      const res = await fetch(
+        `https://ipapi.co/${encodeURIComponent(ip)}/json/`,
+        {
+          // キャッシュして呼び出し回数を抑える
+          next: { revalidate: 60 * 60 * 24 },
+        }
+      );
+
+      if (res.ok) {
+        const data: {
+          country_code?: string;
+          region?: string;
+          region_code?: string;
+          city?: string;
+        } = await res.json();
+
+        if (!country && data.country_code) {
+          country = data.country_code;
+        }
+        if (!region && (data.region || data.region_code)) {
+          region = data.region || data.region_code || undefined;
+        }
+        if (!city && data.city) {
+          city = data.city;
+        }
+      }
+    } catch (error) {
+      console.error('GeoIP lookup failed:', error);
+    }
+  }
 
   return { country, region, city };
 }
